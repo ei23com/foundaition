@@ -13,9 +13,9 @@ A **single-binary web application** for collecting, managing, and summarizing li
 - **Local LLM support** – Use [LiteLLM](https://github.com/BerriAI/litellm) or [llama.cpp](https://github.com/ggml-org/llama.cpp) server as drop-in replacements – just set `OPENAI_BASE_URL` to your local endpoint
 - **Bilingual UI** – Deutsch & English, switchable at runtime
 - **Categorization** – Auto-categorize entries using a separate (faster) model, language-aware
-- **Smart filtering** – By category, bookmark/favorite/read status, full-text search
+- **Smart filtering** – By category, bookmark/favorite/read status, full-text search, URL pattern, note content
 - **Read tracking** – Mark articles as read/unread directly from the list view
-- **RSS/Atom feed** – `/rss` endpoint with action links for automation
+- **RSS/Atom feed** – `/rss` endpoint with full filter support (category, URL, note, status), action links for automation
 - **SQLite** – Local storage, no database server needed
 - **Dark/Light mode** – Switchable theme, respects system preference
 
@@ -57,9 +57,23 @@ For YouTube transcription, FoundAItion supports the standard OpenAI Whisper API.
 
 👉 **[WhisperAPIProxy](https://github.com/ei23fxg/WhisperAPIProxy)** – Docker-based Whisper server with OpenAI-compatible API
 
+## Android: Share Links via HTTP Shortcuts
+
+Use the free **[HTTP Shortcuts](https://github.com/Waboodoo/HTTP-Shortcuts)** app to share links directly from Android to FoundAItion – perfect for quickly saving articles, YouTube videos, or even entire playlists:
+
+1. Create a new shortcut with `POST` to `http://<your-instance>:8080/linkshare`
+2. Set **Content-Type** to `application/json`
+3. Use this body to grab the shared URL:
+   ```json
+   {"url": "{{param:clipboard|url}}", "note": "shared"}
+   ```
+4. Enable **"Share"** in the shortcut – it will appear in Android's share menu
+   
+See the [manual](manual_EN.md#android-share-links-via-http-shortcuts) for more details.
+
 ## Documentation
 
-See [manual_DE.md](manual_DE.md) for full documentation (German) or [manual_EN.md](manual_EN.md) (English).
+See [manual_DE.md](manual_DE.md) (German) or [manual_EN.md](manual_EN.md) (English) for full documentation.
 
 ## License
 

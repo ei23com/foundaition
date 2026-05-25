@@ -90,6 +90,27 @@ func (a *App) handleAPI(w http.ResponseWriter, r *http.Request) {
 // ─── List Links – GET /api/links ─────────────────────────────────────────────
 
 func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
+	// ── Single link by ID ───────────────────────────────────────────────────
+	if idStr := r.URL.Query().Get("id"); idStr != "" {
+		id, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil || id <= 0 {
+			http.Error(w, "invalid id", http.StatusBadRequest)
+			return
+		}
+		l, err := a.fetchLinkByID(id)
+		if err == sql.ErrNoRows {
+			http.Error(w, "link not found", http.StatusNotFound)
+			return
+		} else if err != nil {
+			log.Printf("ERROR: fetch link %d: %v", id, err)
+			http.Error(w, "query error", http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(linkListResponse{Links: []Link{*l}, Total: 1})
+		return
+	}
+
 	page := 1
 	if p, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil && p > 0 {
 		page = p
@@ -98,6 +119,8 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 
 	catFilter := r.URL.Query().Get("category")
 	q := r.URL.Query().Get("q")
+	urlLike := r.URL.Query().Get("url_like")
+	noteFilter := r.URL.Query().Get("note")
 	includeFilter := r.URL.Query().Get("included")
 	markedFilter := r.URL.Query().Get("marked") // "true" | "false"
 	readFilter := r.URL.Query().Get("read")     // "true" | "false"
@@ -120,12 +143,22 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 	} else if readFilter == "false" {
 		whereClauses = append(whereClauses, `"read" = 0`)
 	}
+	if urlLike != "" {
+		pattern := "%" + urlLike + "%"
+		whereClauses = append(whereClauses, `"url" LIKE ?`)
+		args = append(args, pattern)
+	}
 	if q != "" {
 		pattern := "%" + q + "%"
 		whereClauses = append(whereClauses,
 			`("title" LIKE ? OR "url" LIKE ? OR "summary" LIKE ? OR "category" LIKE ?)`,
 		)
 		args = append(args, pattern, pattern, pattern, pattern)
+	}
+	if noteFilter != "" {
+		pattern := "%" + noteFilter + "%"
+		whereClauses = append(whereClauses, `"note" LIKE ?`)
+		args = append(args, pattern)
 	}
 
 	whereSQL := ""
@@ -1193,10 +1226,60 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 		limit = 30
 	}
 
-	baseQuery := fmt.Sprintf(`SELECT "id", "timestamp", "url", "title", "summary"
-	FROM %s ORDER BY "id" DESC LIMIT ?`, TableName)
+	catFilter := r.URL.Query().Get("category")
+	q := r.URL.Query().Get("q")
+	urlLike := r.URL.Query().Get("url_like")
+	noteFilter := r.URL.Query().Get("note")
+	includeFilter := r.URL.Query().Get("included")
+	markedFilter := r.URL.Query().Get("marked")
+	readFilter := r.URL.Query().Get("read")
 
-	rows, err := a.db.QueryContext(r.Context(), baseQuery, limit)
+	var whereClauses []string
+	var args []any
+
+	if catFilter != "" {
+		whereClauses = append(whereClauses, `"category" = ?`)
+		args = append(args, catFilter)
+	}
+	if includeFilter == "true" {
+		whereClauses = append(whereClauses, `"included" = 1`)
+	}
+	if markedFilter == "true" {
+		whereClauses = append(whereClauses, `"marked" = 1`)
+	}
+	if readFilter == "true" {
+		whereClauses = append(whereClauses, `"read" = 1`)
+	} else if readFilter == "false" {
+		whereClauses = append(whereClauses, `"read" = 0`)
+	}
+	if q != "" {
+		pattern := "%" + q + "%"
+		whereClauses = append(whereClauses,
+			`("title" LIKE ? OR "url" LIKE ? OR "summary" LIKE ? OR "category" LIKE ?)`,
+		)
+		args = append(args, pattern, pattern, pattern, pattern)
+	}
+	if urlLike != "" {
+		pattern := "%" + urlLike + "%"
+		whereClauses = append(whereClauses, `"url" LIKE ?`)
+		args = append(args, pattern)
+	}
+	if noteFilter != "" {
+		pattern := "%" + noteFilter + "%"
+		whereClauses = append(whereClauses, `"note" LIKE ?`)
+		args = append(args, pattern)
+	}
+
+	whereSQL := ""
+	if len(whereClauses) > 0 {
+		whereSQL = " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	query := fmt.Sprintf(`SELECT "id", "timestamp", "url", "title", "summary"
+	FROM %s%s ORDER BY "id" DESC LIMIT ?`, TableName, whereSQL)
+	dataArgs := append(append([]any{}, args...), limit)
+
+	rows, err := a.db.QueryContext(r.Context(), query, dataArgs...)
 	if err != nil {
 		log.Printf("ERROR: RSS query failed: %v", err)
 		http.Error(w, "query error", http.StatusInternalServerError)

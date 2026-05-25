@@ -220,11 +220,30 @@
         }
 
         /* ── Category Chips ───────────────────────────── */
-        .categories {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.4rem;
-            margin-bottom: 1.25rem;
+        .category-select {
+            width: 100%;
+            padding: 0.45rem 0.75rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            appearance: auto;
+            -webkit-appearance: auto;
+            margin-bottom: 0.75rem;
+        }
+
+        .category-select:hover {
+            border-color: var(--primary);
+        }
+
+        .category-select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(96,165,250,0.15);
         }
 
         .chip {
@@ -972,7 +991,7 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             box-shadow: var(--shadow-lg);
-            min-width: 180px;
+            min-width: 300px;
             z-index: 200;
             overflow: hidden;
         }
@@ -1462,16 +1481,11 @@
             .btn-icon { padding: 0.45rem 0.55rem; font-size: 0.8rem; }
             .container { padding: 0.7rem 0.7rem 2rem; }
 
-            /* Category chips: Scrollbar statt Umbruch */
-            .categories {
-                flex-wrap: nowrap;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-                margin-bottom: 1rem;
-                padding-bottom: 0.25rem;
+            .category-select {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.6rem;
+                margin-bottom: 0.6rem;
             }
-            .categories::-webkit-scrollbar { display: none; }
 
             /* List items noch kompakter */
             .link-item { padding: 0.7rem; gap: 0.45rem; margin-bottom: 0.35rem; }
@@ -1649,6 +1663,8 @@ const translations = {
         filter_include: 'Vormerken',
         filter_marked: 'Favorit',
         filter_read:  'Lesestatus',
+        filter_read_on: 'Gelesen',
+        filter_read_off: 'Ungelesen',
         label_on:     'An',
         label_off:    'Aus',
         add_title:    'Link hinzuf\u00fcgen',
@@ -1723,6 +1739,8 @@ const translations = {
         filter_include: 'Bookmark',
         filter_marked: 'Favorite',
         filter_read:  'Read',
+        filter_read_on: 'Read',
+        filter_read_off: 'Unread',
         label_on:     'On',
         label_off:    'Off',
         add_title:    'Add Link',
@@ -1965,32 +1983,17 @@ function renderList(links) {
             ${lastDate ? `<span>${__('last')}: ${lastDate}</span>` : ''}
             <span>${__('page')} ${currentPage} / ${totalPages}</span>
         </div>
-        <div class="categories">
-            <div class="chip ${activeCategory === '' ? 'active' : ''}" data-cat="">${__('all_categories')}</div>
+        <select class="category-select" id="categorySelect">
+            <option value="" ${activeCategory === '' ? 'selected' : ''}>${__('all_categories')}</option>
             ${categories.map(c =>
-                `<div class="chip ${activeCategory === c.name ? 'active' : ''}" data-cat="${esc(c.name)}">${esc(c.name)} (${c.count})</div>`
+                `<option value="${esc(c.name)}" ${activeCategory === c.name ? 'selected' : ''}>${esc(c.name)} (${c.count})</option>`
             ).join('')}
-        </div>
+        </select>
         <div class="filter-chips">
-            <span class="filter-label">${__('filter_include')}:</span>
-            <label class="filter-toggle">
-                <input type="checkbox" class="toggle-switch" id="filterIncToggle" ${activeIncludeFilter === 'true' ? 'checked' : ''} />
-                <span>${(activeIncludeFilter === 'true') ? __('label_on') : __('label_off')}</span>
-            </label>
-        </div>
-        <div class="filter-chips">
-            <span class="filter-label">${__('filter_marked')}:</span>
-            <label class="filter-toggle">
-                <input type="checkbox" class="toggle-switch" id="filterMkToggle" ${activeMarkedFilter === 'true' ? 'checked' : ''} />
-                <span>${(activeMarkedFilter === 'true') ? __('label_on') : __('label_off')}</span>
-            </label>
-        </div>
-        <div class="filter-chips">
-            <span class="filter-label">${__('filter_read')}:</span>
-            <label class="filter-toggle">
-                <input type="checkbox" class="toggle-switch" id="filterReadToggle" ${activeReadFilter === 'true' ? 'checked' : ''} />
-                <span>${(activeReadFilter === 'true') ? __('label_on') : __('label_off')}</span>
-            </label>
+            <span class="chip ${activeIncludeFilter === 'true' ? 'active' : ''}" data-filter="include">${__('filter_include')}</span>
+            <span class="chip ${activeMarkedFilter === 'true' ? 'active' : ''}" data-filter="marked">${__('filter_marked')}</span>
+            <span class="chip ${activeReadFilter === 'true' ? 'active' : ''}" data-filter="read">${__('filter_read_on')}</span>
+            <span class="chip ${activeReadFilter === 'false' ? 'active' : ''}" data-filter="unread">${__('filter_read_off')}</span>
         </div>`;
 
     if (links.length === 0) {
@@ -2061,44 +2064,33 @@ function renderList(links) {
 
     appEl.innerHTML = html;
 
-    // Bind events – Kategorie-Chips (data-cat)
-    appEl.querySelectorAll('[data-cat]').forEach(el => {
+    // Category dropdown
+    const catSelect = document.getElementById('categorySelect');
+    if (catSelect) {
+        catSelect.addEventListener('change', () => {
+            activeCategory = catSelect.value;
+            currentPage = 1;
+            load();
+        });
+    }
+
+    // Filter chips (Include / Marked / Read / Unread)
+    appEl.querySelectorAll('.filter-chips [data-filter]').forEach(el => {
         el.addEventListener('click', () => {
-            activeCategory = el.dataset.cat || '';
+            const filter = el.dataset.filter;
+            if (filter === 'include') {
+                activeIncludeFilter = activeIncludeFilter === 'true' ? '' : 'true';
+            } else if (filter === 'marked') {
+                activeMarkedFilter = activeMarkedFilter === 'true' ? '' : 'true';
+            } else if (filter === 'read') {
+                activeReadFilter = activeReadFilter === 'true' ? '' : 'true';
+            } else if (filter === 'unread') {
+                activeReadFilter = activeReadFilter === 'false' ? '' : 'false';
+            }
             currentPage = 1;
             load();
         });
     });
-
-    // Include-Toggle-Filter (An/Aus)
-    const filterIncToggle = document.getElementById('filterIncToggle');
-    if (filterIncToggle) {
-        filterIncToggle.addEventListener('change', () => {
-            activeIncludeFilter = filterIncToggle.checked ? 'true' : '';
-            currentPage = 1;
-            load();
-        });
-    }
-
-    // Markiert-Toggle-Filter (An/Aus)
-    const filterMkToggle = document.getElementById('filterMkToggle');
-    if (filterMkToggle) {
-        filterMkToggle.addEventListener('change', () => {
-            activeMarkedFilter = filterMkToggle.checked ? 'true' : '';
-            currentPage = 1;
-            load();
-        });
-    }
-
-    // Read-Toggle-Filter (An/Aus)
-    const filterReadToggle = document.getElementById('filterReadToggle');
-    if (filterReadToggle) {
-        filterReadToggle.addEventListener('change', () => {
-            activeReadFilter = filterReadToggle.checked ? 'true' : '';
-            currentPage = 1;
-            load();
-        });
-    }
 
     // Envelope read-btn click: toggle read status inline
     appEl.querySelectorAll('.link-read-btn').forEach(el => {

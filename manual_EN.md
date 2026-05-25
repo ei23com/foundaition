@@ -26,6 +26,28 @@ A small, fast web interface for **managing**, **searching** and **sharing** link
 
 ---
 
+## Android: Share Links via HTTP Shortcuts
+
+The free **[HTTP Shortcuts](https://github.com/Waboodoo/HTTP-Shortcuts)** app (highly recommended!) lets you send links directly from the Android share menu to FoundAItion:
+
+1. Install **HTTP Shortcuts** and create a new shortcut
+2. Method: `POST` · URL: `http://<your-instance>:8080/linkshare`
+3. **Content-Type**: `application/json`
+4. **Body** (JSON):
+   ```json
+   {"url": "{{param:clipboard|url}}", "note": "shared"}
+   ```
+5. Enable **"Share"** in the shortcut settings so it appears in Android's share dialog
+6. Feel free to add more shortcuts – e.g. one for YouTube playlists:
+   ```json
+   {"url": "{{param:clipboard|url}}", "note": "chapters"}
+   ```
+   (thanks to the `chapters` filter word, chapter overviews will be created)
+
+Articles, videos, or entire playlists land in FoundAItion with a single tap and get summarized automatically.
+
+---
+
 ## Requirements
 
 | What | Why |
@@ -58,11 +80,6 @@ The `links` table is **auto-created** on first run (`CREATE TABLE IF NOT EXISTS`
 | `included` | INTEGER | `0` | Include in export/view |
 | `marked` | INTEGER | `0` | Marked flag |
 | `read` | INTEGER | `0` | Read/Unread flag |
-| `created_at` | TEXT | – | Auto-generated timestamp |
-| `updated_at` | TEXT | – | Auto-generated timestamp |
-| `created_by` | TEXT | – | Creator ID (reserved) |
-| `updated_by` | TEXT | – | Editor ID (reserved) |
-
 ---
 
 ## Quick Start
@@ -145,7 +162,7 @@ Open `http://localhost:8080` in your browser. Change port via `LISTEN_PORT=9000`
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/` | Index page (HTML) |
-| GET | `/api/links` | List links (`?page=N&q=...&category=...&included=true&marked=true&read=true/false`) |
+| GET | `/api/links` | List links – Filters: `?page=N`, `?q=...` (title/url/summary/category), `?url_like=...` (url only), `?category=...`, `?note=...`, `?included=true`, `?marked=true`, `?read=true/false` · Single link: `?id=123` |
 | PATCH | `/api/links?id=X` | Update fields (`?note=...&included=true/false&marked=true/false&read=true/false`) |
 | DELETE | `/api/links?id=X` | Delete link |
 | GET | `/api/categories` | List categories with counts |
@@ -156,7 +173,7 @@ Open `http://localhost:8080` in your browser. Change port via `LISTEN_PORT=9000`
 | GET | `/api/config` | Get configuration |
 | POST | `/api/config` | Save configuration |
 | GET/POST | `/api/language` | Get/set UI language (`{"language":"de"}`) |
-| GET | `/rss` | Atom 1.0 feed |
+| GET | `/rss` | Atom 1.0 feed (`?page=N&q=...&url_like=...&category=...&note=...&included=true&marked=true&read=true/false`) |
 | GET | `/api/feed/mark?id=X` | Set marked=1 |
 | GET | `/api/feed/include?id=X` | Set included=1 |
 | GET | `/api/feed/delete-summary?id=X` | Clear summary + content |

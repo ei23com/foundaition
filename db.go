@@ -57,11 +57,7 @@ func ensureTableExists(db *sql.DB, tblName string) error {
 			category     TEXT,
 			included     INTEGER DEFAULT 0,
 			marked       INTEGER DEFAULT 0,
-			read         INTEGER DEFAULT 0,
-			created_at   TEXT,
-			updated_at   TEXT,
-			created_by   TEXT,
-			updated_by   TEXT
+			read         INTEGER DEFAULT 0
 		)`, tblName)
 
 	_, err := db.Exec(createSQL)
