@@ -152,8 +152,9 @@ Dann `http://localhost:8080` im Browser öffnen. Port über `LISTEN_PORT=9000` �
 | `CRAWL_TIMEOUT` | `60` | Timeout per crawl request (seconds) |
 | `YTDLP_PATH` | auto-detect | Path to yt-dlp binary |
 | `MAX_PROCESS_DAYS` | `14` | Max days backwards for batch processing |
-| `RSS_BASE_URL` | *(empty)* | External base URL for action links in Atom feed |
-| `RSS_ITEM_COUNT` | `30` | Max entries in Atom feed |
+| `RSS_BASE_URL` | *(leer)* | Externe Basis-URL für Action-Links im Atom-Feed |
+| `RSS_ITEM_COUNT` | `30` | Maximale Einträge im Atom-Feed |
+| `RSS_EXTRA_ACTION_LINK` | *(leer)* | Kommagetrennte Liste von Extra-Links: `[Name](url)` – `{id}` wird ersetzt (z.B. `[Veröffentlichen](http://10.1.1.11:1880/publish?id={id}),[Als gelesen](http://10.1.1.11:1880/read?id={id})`) |
 
 ---
 

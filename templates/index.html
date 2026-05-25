@@ -277,7 +277,6 @@
         }
 
 
-        /* ── Status indicator dots in list items ──── */
         .link-title-read {
             opacity: 0.7;
         }
@@ -1888,6 +1887,9 @@ async function showDetail(id) {
                 try {
                     await fetch('/api/links?id=' + id + '&read=true', { method: 'PATCH' });
                     link.read = true;
+                    // Auch im Listen-Cache aktualisieren
+                    const cached = allLinks.find(l => l.id === id);
+                    if (cached) cached.read = true;
                 } catch(e) { /* non-fatal */ }
             }
             renderDetail(link);
@@ -1955,7 +1957,7 @@ function renderList(links) {
             }
 
             const dateStr = link.timestamp ? formatDateShort(link.timestamp) : '';
-            const readDot = (link.read === true) ? ' read-on' : '';
+            const readDot = (link.read === true) ? ' read' : '';
 
             html += `
                 <li class="link-item" tabindex="0" data-id="${link.id}">

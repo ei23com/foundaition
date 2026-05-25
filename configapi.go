@@ -71,6 +71,7 @@ var configSchema = []envConfigEntry{
 	// ── RSS Feed ──
 	{Key: "RSS_BASE_URL", Label: "RSS Basis-URL", Description: "Externe URL für Action-Links im Feed (z.B. http://10.1.1.11:8080). Leer = keine Action-Links.", Section: "rss"},
 	{Key: "RSS_ITEM_COUNT", Label: "RSS Einträge", Description: "Maximale Anzahl Einträge im Feed (default: 30)", Section: "rss", Type: "number"},
+	{Key: "RSS_EXTRA_ACTION_LINK", Label: "RSS Extra Action-Links", Description: "Kommagetrennte Liste: [Name](url) – {id} wird durch die ID ersetzt (z.B. [Veröffentlichen](http://10.1.1.11:1880/publish?id={id}),[Gelesen](http://10.1.1.11:1880/read?id={id}))", Section: "rss"},
 
 	// ── Tools ──
 	{Key: "UPDATE_YTDlP", Label: "yt-dlp aktualisieren", Description: "yt-dlp_linux + srt_fix Plugin neu herunterladen (überschreibt vorhandene Dateien)", Section: "tools", Type: "button"},
@@ -292,10 +293,51 @@ func (a *App) saveConfig(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("[config] saved %d entries to %s", len(entries), envPath)
 
+	// In-Memory Config sofort aktualisieren (kein Neustart nötig)
+	for k, v := range existing {
+		if v != "" {
+			a.applyConfigValue(k, v)
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
 		"status":  "ok",
 		"envFile": envPath,
-		"note":    "Neustart erforderlich für Änderungen",
+		"note":    "Gespeichert und aktiviert",
 	})
+}
+
+// applyConfigValue aktualisiert einen einzelnen Config-Wert im laufenden App-Kontext.
+func (a *App) applyConfigValue(key, value string) {
+	switch key {
+	case "RSS_BASE_URL":
+		a.cfg.RssBaseURL = value
+	case "RSS_ITEM_COUNT":
+		if n, err := strconv.Atoi(value); err == nil {
+			a.cfg.RssItemCount = n
+		}
+	case "RSS_EXTRA_ACTION_LINK":
+		a.cfg.RssExtraActionLink = value
+	case "OPENAI_API_KEY":
+		a.cfg.OpenAIKey = value
+	case "OPENAI_MODEL":
+		a.cfg.OpenAIModel = value
+	case "OPENAI_BASE_URL":
+		a.cfg.OpenAIBaseURL = value
+	case "SUMMARY_MAX_TOKENS":
+		if n, err := strconv.Atoi(value); err == nil {
+			a.cfg.SummaryMaxTokens = n
+		}
+	case "DB_FILE":
+		a.cfg.DBFile = value
+	case "UI_LANGUAGE":
+		a.cfg.UILanguage = value
+	case "CATEGORIES_DE":
+		a.cfg.CategoriesDE = value
+	case "CATEGORIES_EN":
+		a.cfg.CategoriesEN = value
+	case "CATEGORIZE_MODEL":
+		a.cfg.CategorizeModel = value
+	}
 }

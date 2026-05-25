@@ -1338,6 +1338,36 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 	base := a.cfg.RssBaseURL
 	now := time.Now().UTC().Format(time.RFC3339)
 
+	// Extra Action-Links parsen: [Name](url),[Name](url)
+	type extraLink struct {
+		Name string
+		URL  string
+	}
+	var extraLinks []extraLink
+	if a.cfg.RssExtraActionLink != "" {
+		log.Printf("[rss] RssExtraActionLink=%q", a.cfg.RssExtraActionLink)
+		parts := strings.Split(a.cfg.RssExtraActionLink, ",")
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if len(p) < 4 || p[0] != '[' {
+				continue
+			}
+			closeB := strings.IndexByte(p, ']')
+			if closeB < 1 || closeB+1 >= len(p) || p[closeB+1] != '(' {
+				continue
+			}
+			closeP := strings.LastIndexByte(p, ')')
+			if closeP <= closeB+1 {
+				continue
+			}
+			extraLinks = append(extraLinks, extraLink{
+				Name: p[1:closeB],
+				URL:  p[closeB+2 : closeP],
+			})
+		}
+		log.Printf("[rss] %d extra action links parsed", len(extraLinks))
+	}
+
 	buf := &strings.Builder{}
 	xmlHeader := `<?xml version="1.0" encoding="UTF-8"?>`
 	buf.WriteString(xmlHeader + "\n")
@@ -1373,6 +1403,19 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString("    <content type=\"html\">\n")
 		buf.WriteString("      <![CDATA[")
 
+		// Extra Action-Links (oben, im Feed prominent sichtbar)
+		if len(extraLinks) > 0 {
+			buf.WriteString("<p>")
+			for i, el := range extraLinks {
+				if i > 0 {
+					buf.WriteString(" &middot; ")
+				}
+				url := strings.ReplaceAll(el.URL, "{id}", strconv.FormatInt(e.ID, 10))
+				buf.WriteString(fmt.Sprintf("<a href=\"%s\">%s</a>", escXmlAttr(url), escXml(el.Name)))
+			}
+			buf.WriteString("</p>")
+		}
+
 		// Summary / article body
 		if e.Summary != "" {
 			buf.WriteString("<article>")
@@ -1380,20 +1423,7 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 			buf.WriteString("</article>")
 		}
 
-		// Thumbnail
-		ytID := extractYtVideoId(e.URL)
-		if ytID != "" {
-			buf.WriteString(fmt.Sprintf("<img src=\"https://i.ytimg.com/vi/%s/hqdefault.jpg\" alt=\"Thumbnail\"/>", escXmlAttr(ytID)))
-		}
 
-		// Action links (inside content so valid Atom)
-		if base != "" {
-			buf.WriteString("<p><small>")
-			buf.WriteString(fmt.Sprintf("<a href=\"%s/api/feed/mark?id=%d\">Mark</a> | ", escXmlAttr(base), e.ID))
-			buf.WriteString(fmt.Sprintf("<a href=\"%s/api/feed/include?id=%d\">Include</a> | ", escXmlAttr(base), e.ID))
-			buf.WriteString(fmt.Sprintf("<a href=\"%s/api/feed/delete-summary?id=%d\">Delete Summary</a>", escXmlAttr(base), e.ID))
-			buf.WriteString("</small></p>")
-		}
 
 		buf.WriteString("]]>\n")
 		buf.WriteString("    </content>\n")

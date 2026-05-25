@@ -28,6 +28,7 @@ type Config struct {
 	DBFile                string // SQLite file path (default: ./foundaition.db)
 	RssBaseURL            string // Base URL for RSS feed action links
 	RssItemCount          int    // Max entries in RSS feed (default: 30)
+	RssExtraActionLink    string // Extra action link template (e.g. "http://…/publish?id={id}")
 	UILanguage            string // UI language: "de" or "en" (default: "de")
 	CategoriesDE          string // German category list for auto-categorization
 	CategoriesEN          string // English category list for auto-categorization
@@ -71,6 +72,7 @@ func loadConfig() Config {
 		DBFile:                envOrDefault("DB_FILE", "./foundaition.db"),
 		RssBaseURL:            envOrDefault("RSS_BASE_URL", ""),
 		RssItemCount:          envIntOrDefault("RSS_ITEM_COUNT", 30),
+		RssExtraActionLink:    envOrDefault("RSS_EXTRA_ACTION_LINK", ""),
 		UILanguage:            lang,
 		CategoriesDE:          envOrDefault("CATEGORIES_DE", "Künstliche Intelligenz,Social Media Marketing,Persönlichkeitsentwicklung & Produktivität,Philosophie & Psychologie,Politik,Wissenschaft,Wirtschaft & Finanzen,Technologie & Software,Unsortiert"),
 		CategoriesEN:          envOrDefault("CATEGORIES_EN", "Artificial Intelligence,Social Media Marketing,Personal Development & Productivity,Philosophy & Psychology,Politics,Science,Economy & Finance,Technology & Software,Uncategorized"),
