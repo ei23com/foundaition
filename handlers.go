@@ -267,6 +267,12 @@ func (a *App) updateLink(w http.ResponseWriter, r *http.Request) {
 		args = append(args, 0)
 	}
 
+	// Update category
+	if cat := r.URL.Query().Get("category"); cat != "" {
+		setClauses = append(setClauses, `"category" = ?`)
+		args = append(args, cat)
+	}
+
 	// Clear summary ("true")
 	if r.URL.Query().Get("clear_summary") == "true" {
 		setClauses = append(setClauses, `"summary" = ''`)

@@ -294,21 +294,6 @@
         }
 
         /* ── Status indicator dots in list items ──── */
-        .link-status-dots {
-            display: flex;
-            gap: 0.35rem;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .status-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            background: var(--border);
-        }
-        .status-dot.included-on { background: #34d399; }   /* green */
-        .status-dot.marked-on { background: #fbbf24; }    /* amber */
-        .status-dot.read-on { background: #60a5fa; }      /* blue */
-
         .link-title-read {
             opacity: 0.7;
         }
@@ -1990,10 +1975,10 @@ function renderList(links) {
             ).join('')}
         </select>
         <div class="filter-chips">
-            <span class="chip ${activeIncludeFilter === 'true' ? 'active' : ''}" data-filter="include">${__('filter_include')}</span>
-            <span class="chip ${activeMarkedFilter === 'true' ? 'active' : ''}" data-filter="marked">${__('filter_marked')}</span>
-            <span class="chip ${activeReadFilter === 'true' ? 'active' : ''}" data-filter="read">${__('filter_read_on')}</span>
-            <span class="chip ${activeReadFilter === 'false' ? 'active' : ''}" data-filter="unread">${__('filter_read_off')}</span>
+            <span class="chip ${activeIncludeFilter === 'true' ? 'active' : ''}" data-filter="include" title="${__('filter_include')}">${activeIncludeFilter === 'true' ? '▲' : '△'}</span>
+            <span class="chip ${activeMarkedFilter === 'true' ? 'active' : ''}" data-filter="marked" title="${__('filter_marked')}">${activeMarkedFilter === 'true' ? '★' : '☆'}</span>
+            <span class="chip ${activeReadFilter === 'true' ? 'active' : ''}" data-filter="read" title="${__('filter_read_on')}">◯</span>
+            <span class="chip ${activeReadFilter === 'false' ? 'active' : ''}" data-filter="unread" title="${__('filter_read_off')}">⬤</span>
         </div>`;
 
     if (links.length === 0) {
@@ -2018,22 +2003,18 @@ function renderList(links) {
             }
 
             const dateStr = link.timestamp ? formatDateShort(link.timestamp) : '';
-            const incDot = (link.included && link.included === true) ? ' included-on' : '';
-            const mkDot  = (link.marked === true) ? ' marked-on' : '';
             const readDot = (link.read === true) ? ' read-on' : '';
 
             html += `
                 <li class="link-item" tabindex="0" data-id="${link.id}">
-                    <button class="link-read-btn${readDot}" data-read-id="${link.id}" data-read="${link.read === true ? '1' : '0'}" title="${(link.read === true) ? __('read_tooltip_on') : __('read_tooltip_off')}">${(link.read === true) ? '✅' : '⚪'}</button>
+                    <button class="link-read-btn${readDot}" data-read-id="${link.id}" data-read="${link.read === true ? '1' : '0'}" title="${(link.read === true) ? __('read_tooltip_on') : __('read_tooltip_off')}">${(link.read === true) ? '◯' : '⬤'}</button>
                     <div class="link-title-wrap">
                         <a class="link-title ${readDot ? 'link-title-read' : ''}" href="#link/${link.id}">${esc(link.title)}</a>
                         <div class="link-meta-row">
                             ${dateStr ? `<span class="link-date">${dateStr}</span>` : ''}
                             ${link.content ? `<span class="link-size">${link.content.length.toLocaleString()} Chars · ~${Math.round(link.content.length / 3.5).toLocaleString()} Tokens</span>` : ''}
-                            <div class="link-status-dots">
-                                <span class="status-dot${incDot}" title="${(link.included === true) ? __('included_tooltip_on') : __('included_tooltip_off')}"></span>
-                                <span class="status-dot${mkDot}" title="${(link.marked === true) ? __('marked_tooltip_on') : __('marked_tooltip_off')}"></span>
-                            </div>
+                            <span style="opacity:0.5;font-size:0.75rem;" title="${(link.included === true) ? __('included_tooltip_on') : __('included_tooltip_off')}">${(link.included === true) ? '▲' : '△'}</span>
+                            <span style="opacity:0.5;font-size:0.75rem;" title="${(link.marked === true) ? __('marked_tooltip_on') : __('marked_tooltip_off')}">${(link.marked === true) ? '★' : '☆'}</span>
                         </div>
                         <div class="link-badge-row">${badgeHtml}</div>
                     </div>
@@ -2104,7 +2085,7 @@ function renderList(links) {
                 el.dataset.read = wasRead ? '0' : '1';
                 el.classList.toggle('read', !wasRead);
                 el.title = wasRead ? __('read_tooltip_off') : __('read_tooltip_on');
-                el.textContent = wasRead ? '⚪' : '✅';
+                el.textContent = wasRead ? '⬤' : '◯';
                 const parentItem = el.closest('.link-item');
                 if (parentItem) {
                     const titleLink = parentItem.querySelector('.link-title');
@@ -2177,6 +2158,12 @@ function renderDetail(link) {
             </div>
 
             <div class="detail-actions">
+                <!-- Status toggle icons (dezent) -->
+                <button class="btn-icon" id="detailToggleRead" title="${(link.read === true) ? __('read_tooltip_on') : __('read_tooltip_off')}" style="font-size:1rem;padding:0.4rem 0.5rem;">${(link.read === true) ? '◯' : '⬤'}</button>
+                <button class="btn-icon" id="detailToggleMarked" title="${(link.marked === true) ? __('marked_tooltip_on') : __('marked_tooltip_off')}" style="font-size:1rem;padding:0.4rem 0.5rem;">${(link.marked === true) ? '★' : '☆'}</button>
+                <button class="btn-icon" id="detailToggleIncluded" title="${(link.included === true) ? __('included_tooltip_on') : __('included_tooltip_off')}" style="font-size:1rem;padding:0.4rem 0.5rem;">${(link.included === true) ? '▲' : '△'}</button>
+                <span style="flex:1;"></span>
+                <!-- Action buttons -->
                 <button class="btn-action primary" id="btnCopyUrl">
                     📋 ${__('detail_copy_url')}
                 </button>
@@ -2196,6 +2183,9 @@ function renderDetail(link) {
 
                     <label for="editNotiz">📝 ${__('detail_note_label')}</label>
                     <textarea class="edit-textarea" id="editNotiz" placeholder="${__('detail_note_label')} (optional)">${esc(link.note || '')}</textarea>
+
+                    <label for="editCategory">🏷️ Kategorie</label>
+                    <input type="text" class="edit-input" id="editCategory" value="${esc(link.category || '')}" placeholder="Kategorie (optional)" />
 
                     <label for="editContent">📄 ${__('detail_content_label')}</label>
                     <textarea class="edit-textarea edit-content-ta" id="editContent" placeholder="${__('detail_content_label')} …">${esc(link.content || '')}</textarea>
@@ -2268,6 +2258,32 @@ function renderDetail(link) {
             window.open(link.url, '_blank', 'noopener');
         });
     }
+
+    // ── Detail toggle buttons (Read / Marked / Included) ─
+    async function toggleDetailField(field, newVal, btnId, iconOn, iconOff, tooltipKeyOn, tooltipKeyOff) {
+        try {
+            await fetch('/api/links?id=' + link.id + '&' + field + '=' + newVal, { method: 'PATCH' });
+            link[field] = newVal === 'true';
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.textContent = newVal === 'true' ? iconOn : iconOff;
+                btn.title = newVal === 'true' ? __(tooltipKeyOn) : __(tooltipKeyOff);
+            }
+        } catch (e) {
+            showToast('❌ ' + e.message);
+        }
+    }
+
+    document.getElementById('detailToggleRead')?.addEventListener('click', () => {
+        toggleDetailField('read', !link.read ? 'true' : 'false', 'detailToggleRead', '◯', '⬤', 'read_tooltip_on', 'read_tooltip_off');
+    });
+    document.getElementById('detailToggleMarked')?.addEventListener('click', () => {
+        toggleDetailField('marked', !link.marked ? 'true' : 'false', 'detailToggleMarked', '★', '☆', 'marked_tooltip_on', 'marked_tooltip_off');
+    });
+    document.getElementById('detailToggleIncluded')?.addEventListener('click', () => {
+        const newInc = !(link.included === true) ? 'true' : 'false';
+        toggleDetailField('included', newInc, 'detailToggleIncluded', '▲', '△', 'included_tooltip_on', 'included_tooltip_off');
+    });
 
     // ── Clear Summary ────────────────────────────────────
     const btnClear = document.getElementById('btnClearSummary');
@@ -2360,6 +2376,7 @@ function renderDetail(link) {
         btnSaveEdit.addEventListener('click', async () => {
             const titleVal = document.getElementById('editTitle').value.trim();
             const noteVal = document.getElementById('editNotiz').value.trim();
+            const catVal = document.getElementById('editCategory').value.trim();
             const contentVal = document.getElementById('editContent').value.trim();
             const incVal = editIncluded ? editIncluded.checked : false;
             const mkVal = editMarked ? editMarked.checked : false;
@@ -2368,6 +2385,7 @@ function renderDetail(link) {
             let qs = '/api/links?id=' + link.id;
             if (titleVal) qs += '&title=' + encodeURIComponent(titleVal);
             if (noteVal) qs += '&note=' + encodeURIComponent(noteVal);
+            if (catVal) qs += '&category=' + encodeURIComponent(catVal);
             if (contentVal) qs += '&content=' + encodeURIComponent(contentVal);
             qs += '&included=' + (incVal ? 'true' : 'false');
             qs += '&marked=' + (mkVal ? 'true' : 'false');
@@ -2379,6 +2397,7 @@ function renderDetail(link) {
                 // Update local state
                 link.title = titleVal || undefined;
                 link.note = noteVal || undefined;
+                link.category = catVal || undefined;
                 link.content = contentVal || undefined;
                 link.included = incVal;
                 link.marked = mkVal;
