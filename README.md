@@ -1,6 +1,7 @@
 # FoundAItion – Link Collection & AI Summarizer
 
-![Screenshot](assets/screenshot_01.webp)
+![Screenshot_List](assets/screenshot_01.webp)
+![Screenshot_Detail](assets/screenshot_02.webp)
 
 A **single-binary web application** for collecting, managing, and summarizing links with AI. Built with Go – no npm, no Docker, no external runtime required.
 
