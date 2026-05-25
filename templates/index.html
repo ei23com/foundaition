@@ -275,23 +275,7 @@
             font-weight: 600;
             min-width: 65px;
         }
-        /* Filter toggle: label mit Toggle-Schalter + An/Aus-Text */
-        .filter-toggle {
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
-            cursor: pointer;
-            user-select: none;
-        }
-        .filter-toggle > span {
-            font-size: 0.78rem;
-            color: var(--text-secondary);
-            transition: color 0.2s;
-        }
-        .filter-toggle:has(.toggle-switch:checked) > span {
-            color: var(--primary);
-            font-weight: 600;
-        }
+
 
         /* ── Status indicator dots in list items ──── */
         .link-title-read {
@@ -744,7 +728,7 @@
         }
         .btn-save-edit:hover { opacity: 0.85; }
 
-        .edit-toggles { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.6rem; }
+
 
         .edit-divider {
             border: none;
@@ -759,40 +743,7 @@
             text-align: center;
         }
 
-        .toggle-row {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            cursor: pointer;
-            user-select: none;
-        }
-        .toggle-label { font-size: 0.88rem; font-weight: 600; color: var(--text); min-width: 90px; }
-        .toggle-status { font-size: 0.82rem; color: var(--text-secondary); }
 
-        /* Toggle switch */
-        .toggle-switch {
-            appearance: none;
-            -webkit-appearance: none;
-            width: 40px;
-            height: 22px;
-            background: var(--border);
-            border-radius: 11px;
-            position: relative;
-            cursor: pointer;
-            transition: background 0.2s;
-            flex-shrink: 0;
-        }
-        .toggle-switch::after {
-            content: '';
-            position: absolute;
-            top: 3px; left: 3px;
-            width: 16px; height: 16px;
-            background: white;
-            border-radius: 50%;
-            transition: transform 0.2s;
-        }
-        .toggle-switch:checked { background: var(--primary); }
-        .toggle-switch:checked::after { transform: translateX(18px); }
 
         .markdown-body {
             font-size: 0.95rem;
@@ -1623,7 +1574,7 @@
         <svg style="vertical-align: middle; margin-right: 4px;" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
         </svg>
-        GitHub
+        ei23-FoundAItion
     </a>
 </div>
 
@@ -1926,21 +1877,22 @@ function showList() {
 async function showDetail(id) {
     currentView = 'detail';
     searchRow.style.display = 'none';
+    window.scrollTo(0, 0);
 
-    let link = allLinks.find(l => l.id === id);
-    if (!link) {
-        try { link = await api('/api/share?id=' + id); } catch { /* ignore */ }
-    }
-    if (link) {
-        // Automatisch als gelesen markieren
-        if (link.read !== true) {
-            try {
-                await fetch('/api/links?id=' + id + '&read=true', { method: 'PATCH' });
-                link.read = true;
-            } catch(e) { /* non-fatal */ }
+    // Immer via /api/share laden – enthält content (list cache hat content=null)
+    try {
+        let link = await api('/api/share?id=' + id);
+        if (link) {
+            // Automatisch als gelesen markieren
+            if (link.read !== true) {
+                try {
+                    await fetch('/api/links?id=' + id + '&read=true', { method: 'PATCH' });
+                    link.read = true;
+                } catch(e) { /* non-fatal */ }
+            }
+            renderDetail(link);
         }
-        renderDetail(link);
-    }
+    } catch { /* ignore */ }
 }
 
 // ── Pagination: kompakte Seitenzahlen mit Ellipsis ────────
@@ -2012,7 +1964,7 @@ function renderList(links) {
                         <a class="link-title ${readDot ? 'link-title-read' : ''}" href="#link/${link.id}">${esc(link.title)}</a>
                         <div class="link-meta-row">
                             ${dateStr ? `<span class="link-date">${dateStr}</span>` : ''}
-                            ${link.content ? `<span class="link-size">${link.content.length.toLocaleString()} Chars · ~${Math.round(link.content.length / 3.5).toLocaleString()} Tokens</span>` : ''}
+                            ${link.content_len > 0 ? `<span class="link-size">${link.content_len.toLocaleString()} Chars · ~${Math.round(link.content_len / 3.5).toLocaleString()} Tokens</span>` : ''}
                             <span style="opacity:0.5;font-size:0.75rem;" title="${(link.included === true) ? __('included_tooltip_on') : __('included_tooltip_off')}">${(link.included === true) ? '▲' : '△'}</span>
                             <span style="opacity:0.5;font-size:0.75rem;" title="${(link.marked === true) ? __('marked_tooltip_on') : __('marked_tooltip_off')}">${(link.marked === true) ? '★' : '☆'}</span>
                         </div>
@@ -2151,7 +2103,7 @@ function renderDetail(link) {
                     <div class="detail-meta">
                         ${link.url ? `<a href="${escAttr(link.url)}" target="_blank" rel="noopener">🔗 ${esc(link.url)}</a>` : ''}
                         ${link.timestamp ? `<span>📅 ${formatDate(link.timestamp)}</span>` : ''}
-                        ${link.content ? `<span style="opacity:0.4;font-size:0.78rem;">📄 ${link.content.length.toLocaleString()} Chars · ~${Math.round(link.content.length / 3.5).toLocaleString()} Tokens</span>` : ''}
+                        ${link.content_len > 0 ? `<span style="opacity:0.4;font-size:0.78rem;">📄 ${link.content_len.toLocaleString()} Chars · ~${Math.round(link.content_len / 3.5).toLocaleString()} Tokens</span>` : ''}
                     </div>
                     ${link.note ? `<div style="margin-top:0.5rem;font-size:0.82rem;color:var(--text-secondary);font-style:italic;">📝 ${esc(link.note)}</div>` : ''}
                 </div>
@@ -2191,24 +2143,6 @@ function renderDetail(link) {
                     <textarea class="edit-textarea edit-content-ta" id="editContent" placeholder="${__('detail_content_label')} …">${esc(link.content || '')}</textarea>
 
                     <button class="btn-save-edit" id="btnSaveEdit">💾 ${__('detail_save')}</button>
-
-                    <div class="edit-toggles">
-                        <label class="toggle-row">
-                            <span class="toggle-label">📌 <span data-i18n="filter_include">Include</span></span>
-                            <input type="checkbox" class="toggle-switch" id="editIncluded" ${(link.included === true) ? 'checked' : ''} />
-                            <span class="toggle-status">${(link.included === true) ? __('label_on') : __('label_off')}</span>
-                        </label>
-                        <label class="toggle-row">
-                            <span class="toggle-label">⭐ ${__('filter_marked')}</span>
-                            <input type="checkbox" class="toggle-switch" id="editMarked" ${(link.marked === true) ? 'checked' : ''} />
-                            <span class="toggle-status">${(link.marked === true) ? __('label_on') : __('label_off')}</span>
-                        </label>
-                        <label class="toggle-row">
-                            <span class="toggle-label">📖 ${__('filter_read')}</span>
-                            <input type="checkbox" class="toggle-switch" id="editRead" ${(link.read === true) ? 'checked' : ''} />
-                            <span class="toggle-status">${(link.read === true) ? __('label_on') : __('label_off')}</span>
-                        </label>
-                    </div>
 
                     <!-- Danger zone -->
                     <hr class="edit-divider">
@@ -2351,25 +2285,6 @@ function renderDetail(link) {
     }
 
     // Toggle switches: update status label on change
-    const editIncluded = document.getElementById('editIncluded');
-    const editMarked = document.getElementById('editMarked');
-    const editRead = document.getElementById('editRead');
-    if (editIncluded) {
-        editIncluded.addEventListener('change', () => {
-            editIncluded.parentElement.querySelector('.toggle-status').textContent = editIncluded.checked ? __('label_on') : __('label_off');
-        });
-    }
-    if (editMarked) {
-        editMarked.addEventListener('change', () => {
-            editMarked.parentElement.querySelector('.toggle-status').textContent = editMarked.checked ? __('label_on') : __('label_off');
-        });
-    }
-    if (editRead) {
-        editRead.addEventListener('change', () => {
-            editRead.parentElement.querySelector('.toggle-status').textContent = editRead.checked ? __('label_on') : __('label_off');
-        });
-    }
-
     // Save button: PATCH all edits at once
     const btnSaveEdit = document.getElementById('btnSaveEdit');
     if (btnSaveEdit) {
@@ -2378,18 +2293,12 @@ function renderDetail(link) {
             const noteVal = document.getElementById('editNotiz').value.trim();
             const catVal = document.getElementById('editCategory').value.trim();
             const contentVal = document.getElementById('editContent').value.trim();
-            const incVal = editIncluded ? editIncluded.checked : false;
-            const mkVal = editMarked ? editMarked.checked : false;
-            const readVal = editRead ? editRead.checked : false;
 
             let qs = '/api/links?id=' + link.id;
             if (titleVal) qs += '&title=' + encodeURIComponent(titleVal);
             if (noteVal) qs += '&note=' + encodeURIComponent(noteVal);
             if (catVal) qs += '&category=' + encodeURIComponent(catVal);
             if (contentVal) qs += '&content=' + encodeURIComponent(contentVal);
-            qs += '&included=' + (incVal ? 'true' : 'false');
-            qs += '&marked=' + (mkVal ? 'true' : 'false');
-            qs += '&read=' + (readVal ? 'true' : 'false');
 
             try {
                 await fetch(qs, { method: 'PATCH' });
@@ -2399,9 +2308,6 @@ function renderDetail(link) {
                 link.note = noteVal || undefined;
                 link.category = catVal || undefined;
                 link.content = contentVal || undefined;
-                link.included = incVal;
-                link.marked = mkVal;
-                link.read = readVal;
                 showToast('✅ ' + __('toast_saved'));
             } catch (e) {
                 showToast('❌ ' + e.message);

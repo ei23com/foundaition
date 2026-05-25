@@ -103,6 +103,7 @@ type Link struct {
 	Note        string `json:"note,omitempty"`
 	Summary     string `json:"summary,omitempty"`
 	Content     string `json:"content,omitempty"`
+	ContentLen  int    `json:"content_len"`
 	Category    string `json:"category"`
 	SummaryHTML string `json:"summary_html"`
 	Included    *bool  `json:"included,omitempty"` // included flag (true/false/null)

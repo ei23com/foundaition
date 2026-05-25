@@ -177,14 +177,10 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch data
-	contentCol := "content"
-	if !wantContent {
-		contentCol = "NULL"
-	}
-	dataSQL := fmt.Sprintf(`SELECT "id", "timestamp", "url", "title", "summary", %s AS "content", "category", "note", "included", "marked", "read"
+	dataSQL := fmt.Sprintf(`SELECT "id", "timestamp", "url", "title", "summary", "content", "category", "note", "included", "marked", "read"
 	FROM %s%s
 	ORDER BY "id" DESC
-	LIMIT ? OFFSET ?`, contentCol, TableName, whereSQL)
+	LIMIT ? OFFSET ?`, TableName, whereSQL)
 	dataArgs := append(append([]any{}, args...), pageSizeDB, offset)
 
 	rows, err := a.db.QueryContext(r.Context(), dataSQL, dataArgs...)
@@ -202,7 +198,15 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 			log.Printf("WARN: scan error: %v", err)
 			continue
 		}
+		l.ContentLen = len(l.Content)
 		links = append(links, *l)
+	}
+
+	// Content only im JSON mitsenden wenn explizit angefordert
+	if !wantContent {
+		for i := range links {
+			links[i].Content = ""
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -1050,7 +1054,6 @@ func (a *App) findDuplicateURL(url string) (int64, error) {
 }
 
 // fetchLinkByID loads a single link by its ID.
-// When wantContent is false, the "content" column is not read from the database (NULL).
 func (a *App) fetchLinkByID(id int64, wantContent bool) (*Link, error) {
 	var l Link
 	var cat sql.NullString
@@ -1062,13 +1065,9 @@ func (a *App) fetchLinkByID(id int64, wantContent bool) (*Link, error) {
 	var markedVal NullBool
 	var readVal NullBool
 
-	contentCol := "content"
-	if !wantContent {
-		contentCol = "NULL"
-	}
 	query := fmt.Sprintf(`
-		SELECT "id", "timestamp", "url", "title", "summary", %s AS "content", "category", "note", "included", "marked", "read"
-		FROM %s WHERE "id" = ?`, contentCol, TableName)
+		SELECT "id", "timestamp", "url", "title", "summary", "content", "category", "note", "included", "marked", "read"
+		FROM %s WHERE "id" = ?`, TableName)
 	err := a.db.QueryRow(query, id).Scan(&l.ID, &ts, &l.URL, &l.Title, &summary, &content, &cat, &note, &inc, &markedVal, &readVal)
 	if err != nil {
 		return nil, err
@@ -1100,10 +1099,15 @@ func (a *App) fetchLinkByID(id int64, wantContent bool) (*Link, error) {
 		l.Read = true
 	}
 
+	l.ContentLen = len(l.Content)
+
 	var buf strings.Builder
 	if l.Summary != "" {
 		_ = mdRenderer.Convert([]byte(l.Summary), &buf)
 		l.SummaryHTML = buf.String()
+	}
+	if !wantContent {
+		l.Content = ""
 	}
 	return &l, nil
 }
