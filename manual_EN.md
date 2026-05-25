@@ -162,7 +162,7 @@ Open `http://localhost:8080` in your browser. Change port via `LISTEN_PORT=9000`
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/` | Index page (HTML) |
-| GET | `/api/links` | List links – Filters: `?page=N`, `?q=...` (title/url/summary/category), `?url_like=...` (url only), `?category=...`, `?note=...`, `?included=true`, `?marked=true`, `?read=true/false` · Single link: `?id=123` |
+| GET | `/api/links` | List links – Filters: `?page=N`, `?q=...`, `?url_like=...`, `?category=...`, `?note=...`, `?included=true`, `?marked=true`, `?read=true/false` · Single link: `?id=123` · Include content: `?content=true` (omitted by default) |
 | PATCH | `/api/links?id=X` | Update fields (`?note=...&included=true/false&marked=true/false&read=true/false`) |
 | DELETE | `/api/links?id=X` | Delete link |
 | GET | `/api/categories` | List categories with counts |
@@ -173,7 +173,7 @@ Open `http://localhost:8080` in your browser. Change port via `LISTEN_PORT=9000`
 | GET | `/api/config` | Get configuration |
 | POST | `/api/config` | Save configuration |
 | GET/POST | `/api/language` | Get/set UI language (`{"language":"de"}`) |
-| GET | `/rss` | Atom 1.0 feed (`?page=N&q=...&url_like=...&category=...&note=...&included=true&marked=true&read=true/false`) |
+| GET | `/rss` | Atom 1.0 feed (`?limit=N&q=...&url_like=...&category=...&note=...&included=true&marked=true&read=true/false`) |
 | GET | `/api/feed/mark?id=X` | Set marked=1 |
 | GET | `/api/feed/include?id=X` | Set included=1 |
 | GET | `/api/feed/delete-summary?id=X` | Clear summary + content |

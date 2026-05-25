@@ -90,6 +90,8 @@ func (a *App) handleAPI(w http.ResponseWriter, r *http.Request) {
 // ─── List Links – GET /api/links ─────────────────────────────────────────────
 
 func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
+	wantContent := r.URL.Query().Get("content") == "true"
+
 	// ── Single link by ID ───────────────────────────────────────────────────
 	if idStr := r.URL.Query().Get("id"); idStr != "" {
 		id, err := strconv.ParseInt(idStr, 10, 64)
@@ -97,7 +99,7 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid id", http.StatusBadRequest)
 			return
 		}
-		l, err := a.fetchLinkByID(id)
+		l, err := a.fetchLinkByID(id, wantContent)
 		if err == sql.ErrNoRows {
 			http.Error(w, "link not found", http.StatusNotFound)
 			return
@@ -124,7 +126,6 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 	includeFilter := r.URL.Query().Get("included")
 	markedFilter := r.URL.Query().Get("marked") // "true" | "false"
 	readFilter := r.URL.Query().Get("read")     // "true" | "false"
-
 	var whereClauses []string
 	var args []any
 
@@ -141,7 +142,7 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 	if readFilter == "true" {
 		whereClauses = append(whereClauses, `"read" = 1`)
 	} else if readFilter == "false" {
-		whereClauses = append(whereClauses, `"read" = 0`)
+		whereClauses = append(whereClauses, `("read" = 0 OR "read" IS NULL)`)
 	}
 	if urlLike != "" {
 		pattern := "%" + urlLike + "%"
@@ -176,10 +177,14 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch data
-	dataSQL := fmt.Sprintf(`SELECT "id", "timestamp", "url", "title", "summary", "content", "category", "note", "included", "marked", "read"
+	contentCol := "content"
+	if !wantContent {
+		contentCol = "NULL"
+	}
+	dataSQL := fmt.Sprintf(`SELECT "id", "timestamp", "url", "title", "summary", %s AS "content", "category", "note", "included", "marked", "read"
 	FROM %s%s
 	ORDER BY "id" DESC
-	LIMIT ? OFFSET ?`, TableName, whereSQL)
+	LIMIT ? OFFSET ?`, contentCol, TableName, whereSQL)
 	dataArgs := append(append([]any{}, args...), pageSizeDB, offset)
 
 	rows, err := a.db.QueryContext(r.Context(), dataSQL, dataArgs...)
@@ -362,7 +367,7 @@ func (a *App) share(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		l, err := a.fetchLinkByID(id)
+		l, err := a.fetchLinkByID(id, true)
 		if err == sql.ErrNoRows {
 			http.Error(w, "link not found", http.StatusNotFound)
 			return
@@ -382,7 +387,7 @@ func (a *App) share(w http.ResponseWriter, r *http.Request) {
 
 		var result []Link
 		for _, id := range req.IDs {
-			l, err := a.fetchLinkByID(id)
+			l, err := a.fetchLinkByID(id, true)
 			if err != nil {
 				continue
 			}
@@ -1039,7 +1044,8 @@ func (a *App) findDuplicateURL(url string) (int64, error) {
 }
 
 // fetchLinkByID loads a single link by its ID.
-func (a *App) fetchLinkByID(id int64) (*Link, error) {
+// When wantContent is false, the "content" column is not read from the database (NULL).
+func (a *App) fetchLinkByID(id int64, wantContent bool) (*Link, error) {
 	var l Link
 	var cat sql.NullString
 	var summary sql.NullString
@@ -1050,9 +1056,13 @@ func (a *App) fetchLinkByID(id int64) (*Link, error) {
 	var markedVal NullBool
 	var readVal NullBool
 
+	contentCol := "content"
+	if !wantContent {
+		contentCol = "NULL"
+	}
 	query := fmt.Sprintf(`
-		SELECT "id", "timestamp", "url", "title", "summary", "content", "category", "note", "included", "marked", "read"
-		FROM %s WHERE "id" = ?`, TableName)
+		SELECT "id", "timestamp", "url", "title", "summary", %s AS "content", "category", "note", "included", "marked", "read"
+		FROM %s WHERE "id" = ?`, contentCol, TableName)
 	err := a.db.QueryRow(query, id).Scan(&l.ID, &ts, &l.URL, &l.Title, &summary, &content, &cat, &note, &inc, &markedVal, &readVal)
 	if err != nil {
 		return nil, err
@@ -1225,6 +1235,10 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 	if limit <= 0 {
 		limit = 30
 	}
+	// URL-Parameter ?limit=N überschreibt die Konfiguration
+	if l, err := strconv.Atoi(r.URL.Query().Get("limit")); err == nil && l > 0 {
+		limit = l
+	}
 
 	catFilter := r.URL.Query().Get("category")
 	q := r.URL.Query().Get("q")
@@ -1250,7 +1264,7 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 	if readFilter == "true" {
 		whereClauses = append(whereClauses, `"read" = 1`)
 	} else if readFilter == "false" {
-		whereClauses = append(whereClauses, `"read" = 0`)
+		whereClauses = append(whereClauses, `("read" = 0 OR "read" IS NULL)`)
 	}
 	if q != "" {
 		pattern := "%" + q + "%"
@@ -1303,7 +1317,11 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		e.Ts = ts
-		e.Summary = summary.String
+		if summary.Valid {
+			var htmlBuf strings.Builder
+			_ = mdRenderer.Convert([]byte(summary.String), &htmlBuf)
+			e.Summary = htmlBuf.String()
+		}
 		entries = append(entries, e)
 	}
 
@@ -1322,9 +1340,14 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 	buf.WriteString(fmt.Sprintf("  <updated>%s</updated>\n", escXml(now)))
 
 	for _, e := range entries {
-		tsStr := e.Ts.Format(time.RFC3339)
-		if tsStr == "" {
-			tsStr = now
+		// Use current time as updated when a summary exists (could have been
+		// regenerated at any time). Otherwise use the original creation timestamp.
+		tsStr := now
+		if e.Summary == "" {
+			tsStr = e.Ts.Format(time.RFC3339)
+			if tsStr == "" {
+				tsStr = now
+			}
 		}
 
 		buf.WriteString("  <entry>\n")
@@ -1337,26 +1360,33 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 		}
 		buf.WriteString(fmt.Sprintf("    <updated>%s</updated>\n", escXml(tsStr)))
 
+		buf.WriteString("    <content type=\"html\">\n")
+		buf.WriteString("      <![CDATA[")
+
+		// Summary / article body
 		if e.Summary != "" {
-			buf.WriteString("    <content type=\"html\">\n")
-			buf.WriteString("      <![CDATA[<article>")
+			buf.WriteString("<article>")
 			buf.WriteString(e.Summary)
-			buf.WriteString("</article>]]>")
-			buf.WriteString("\n")
+			buf.WriteString("</article>")
 		}
 
+		// Thumbnail
+		ytID := extractYtVideoId(e.URL)
+		if ytID != "" {
+			buf.WriteString(fmt.Sprintf("<img src=\"https://i.ytimg.com/vi/%s/hqdefault.jpg\" alt=\"Thumbnail\"/>", escXmlAttr(ytID)))
+		}
+
+		// Action links (inside content so valid Atom)
 		if base != "" {
-			buf.WriteString("      <p><small>")
+			buf.WriteString("<p><small>")
 			buf.WriteString(fmt.Sprintf("<a href=\"%s/api/feed/mark?id=%d\">Mark</a> | ", escXmlAttr(base), e.ID))
 			buf.WriteString(fmt.Sprintf("<a href=\"%s/api/feed/include?id=%d\">Include</a> | ", escXmlAttr(base), e.ID))
 			buf.WriteString(fmt.Sprintf("<a href=\"%s/api/feed/delete-summary?id=%d\">Delete Summary</a>", escXmlAttr(base), e.ID))
 			buf.WriteString("</small></p>")
 		}
 
-		ytID := extractYtVideoId(e.URL)
-		if ytID != "" {
-			buf.WriteString(fmt.Sprintf("      <img src=\"https://i.ytimg.com/vi/%s/hqdefault.jpg\" alt=\"Thumbnail\"/>\n", escXmlAttr(ytID)))
-		}
+		buf.WriteString("]]>\n")
+		buf.WriteString("    </content>\n")
 
 		buf.WriteString("  </entry>\n")
 	}
