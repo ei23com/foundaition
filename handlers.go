@@ -1336,6 +1336,13 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	base := a.cfg.RssBaseURL
+	if base == "" {
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		base = scheme + "://" + r.Host
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	// Extra Action-Links parsen: [Name](url),[Name](url)
@@ -1373,9 +1380,10 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 	buf.WriteString(xmlHeader + "\n")
 	buf.WriteString("<feed xmlns=\"http://www.w3.org/2005/Atom\">\n")
 	buf.WriteString("  <title>ei23-FoundAItion</title>\n")
-	buf.WriteString("  <subtitle>Summaries &amp; Links</subtitle>\n")
+	buf.WriteString("  <subtitle>ei23-FoundAItion</subtitle>\n")
 	if base != "" {
-		buf.WriteString(fmt.Sprintf("  <link href=\"%s/rss\" type=\"application/atom+xml\"/>\n", escXmlAttr(base)))
+		buf.WriteString(fmt.Sprintf("  <link href=\"%s\" rel=\"alternate\" type=\"text/html\"/>\n", escXmlAttr(base)))
+		buf.WriteString(fmt.Sprintf("  <link href=\"%s/rss\" rel=\"self\" type=\"application/atom+xml\"/>\n", escXmlAttr(base)))
 	}
 	buf.WriteString(fmt.Sprintf("  <updated>%s</updated>\n", escXml(now)))
 
@@ -1403,17 +1411,10 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 		buf.WriteString("    <content type=\"html\">\n")
 		buf.WriteString("      <![CDATA[")
 
-		// Extra Action-Links (oben, im Feed prominent sichtbar)
-		if len(extraLinks) > 0 {
-			buf.WriteString("<p>")
-			for i, el := range extraLinks {
-				if i > 0 {
-					buf.WriteString(" &middot; ")
-				}
-				url := strings.ReplaceAll(el.URL, "{id}", strconv.FormatInt(e.ID, 10))
-				buf.WriteString(fmt.Sprintf("<a href=\"%s\">%s</a>", escXmlAttr(url), escXml(el.Name)))
-			}
-			buf.WriteString("</p>")
+		// Thumbnail (ganz oben)
+		ytID := extractYtVideoId(e.URL)
+		if ytID != "" {
+			buf.WriteString(fmt.Sprintf("<img src=\"https://i.ytimg.com/vi/%s/hqdefault.jpg\" alt=\"Thumbnail\"/><br/>", escXmlAttr(ytID)))
 		}
 
 		// Summary / article body
@@ -1421,6 +1422,19 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 			buf.WriteString("<article>")
 			buf.WriteString(e.Summary)
 			buf.WriteString("</article>")
+		}
+
+		// Extra Action-Links (ganz unten)
+		if len(extraLinks) > 0 {
+			buf.WriteString("<br/><p><small>")
+			for i, el := range extraLinks {
+				if i > 0 {
+					buf.WriteString(" &middot; ")
+				}
+				url := strings.ReplaceAll(el.URL, "{id}", strconv.FormatInt(e.ID, 10))
+				buf.WriteString(fmt.Sprintf("<a href=\"%s\">%s</a>", escXmlAttr(url), escXml(el.Name)))
+			}
+			buf.WriteString("</small></p>")
 		}
 
 
@@ -1454,6 +1468,10 @@ func (a *App) handleFeedAPI(w http.ResponseWriter, r *http.Request) {
 		query = fmt.Sprintf(`UPDATE %s SET "marked" = 1 WHERE "id" = ?`, TableName)
 	case strings.HasSuffix(path, "/include"):
 		query = fmt.Sprintf(`UPDATE %s SET "included" = 1 WHERE "id" = ?`, TableName)
+	case strings.HasSuffix(path, "/read"):
+		query = fmt.Sprintf(`UPDATE %s SET "read" = 1 WHERE "id" = ?`, TableName)
+	case strings.HasSuffix(path, "/unread"):
+		query = fmt.Sprintf(`UPDATE %s SET "read" = 0 WHERE "id" = ?`, TableName)
 	case strings.HasSuffix(path, "/delete-summary"):
 		query = fmt.Sprintf(`UPDATE %s SET "summary" = '', "content" = '' WHERE "id" = ?`, TableName)
 	default:

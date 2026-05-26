@@ -125,6 +125,8 @@ func setupHTTPServer(app *App, listenPort int, cfg Config) *http.Server {
 	mux.HandleFunc("/rss", app.handleRSS)
 	mux.HandleFunc("/api/feed/mark", app.handleFeedAPI)
 	mux.HandleFunc("/api/feed/include", app.handleFeedAPI)
+	mux.HandleFunc("/api/feed/read", app.handleFeedAPI)
+	mux.HandleFunc("/api/feed/unread", app.handleFeedAPI)
 	mux.HandleFunc("/api/feed/delete-summary", app.handleFeedAPI)
 
 	// Main page

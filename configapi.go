@@ -69,7 +69,7 @@ var configSchema = []envConfigEntry{
 	{Key: "CATEGORIZE_MODEL", Label: "Categorize Model", Description: "Optional separate model for categorization (e.g. gpt-4o-mini). Leave empty to use the default model.", Section: "categorize"},
 
 	// ── RSS Feed ──
-	{Key: "RSS_BASE_URL", Label: "RSS Basis-URL", Description: "Externe URL für Action-Links im Feed (z.B. http://10.1.1.11:8080). Leer = keine Action-Links.", Section: "rss"},
+	{Key: "RSS_BASE_URL", Label: "RSS Basis-URL", Description: "Basis-URL für Feed-Links (z.B. bei Reverse Proxy). Leer = automatisch aus Request-Host.", Section: "rss"},
 	{Key: "RSS_ITEM_COUNT", Label: "RSS Einträge", Description: "Maximale Anzahl Einträge im Feed (default: 30)", Section: "rss", Type: "number"},
 	{Key: "RSS_EXTRA_ACTION_LINK", Label: "RSS Extra Action-Links", Description: "Kommagetrennte Liste: [Name](url) – {id} wird durch die ID ersetzt (z.B. [Veröffentlichen](http://10.1.1.11:1880/publish?id={id}),[Gelesen](http://10.1.1.11:1880/read?id={id}))", Section: "rss"},
 

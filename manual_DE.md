@@ -152,7 +152,7 @@ Dann `http://localhost:8080` im Browser öffnen. Port über `LISTEN_PORT=9000` �
 | `CRAWL_TIMEOUT` | `60` | Timeout per crawl request (seconds) |
 | `YTDLP_PATH` | auto-detect | Path to yt-dlp binary |
 | `MAX_PROCESS_DAYS` | `14` | Max days backwards for batch processing |
-| `RSS_BASE_URL` | *(leer)* | Externe Basis-URL für Action-Links im Atom-Feed |
+| `RSS_BASE_URL` | *(leer)* | Basis-URL für Feed-Links (z.B. bei Reverse Proxy). Leer = automatisch aus dem Request-Host. |
 | `RSS_ITEM_COUNT` | `30` | Maximale Einträge im Atom-Feed |
 | `RSS_EXTRA_ACTION_LINK` | *(leer)* | Kommagetrennte Liste von Extra-Links: `[Name](url)` – `{id}` wird ersetzt (z.B. `[Veröffentlichen](http://10.1.1.11:1880/publish?id={id}),[Als gelesen](http://10.1.1.11:1880/read?id={id})`) |
 
@@ -177,6 +177,8 @@ Dann `http://localhost:8080` im Browser öffnen. Port über `LISTEN_PORT=9000` �
 | GET | `/rss` | Atom 1.0 feed (`?limit=N&q=...&url_like=...&category=...&note=...&included=true&marked=true&read=true/false`) |
 | GET | `/api/feed/mark?id=X` | Set marked=1 |
 | GET | `/api/feed/include?id=X` | Set included=1 |
+| GET | `/api/feed/read?id=X` | Set read=1 (als gelesen markieren) |
+| GET | `/api/feed/unread?id=X` | Set read=0 (als ungelesen markieren) |
 | GET | `/api/feed/delete-summary?id=X` | Clear summary + content |
 
 ---
