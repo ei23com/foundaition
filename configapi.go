@@ -60,7 +60,6 @@ var configSchema = []envConfigEntry{
 
 	// ── Allgemein ──
 	{Key: "CRAWL_TIMEOUT", Label: "Crawl Timeout", Description: "Timeout in Sekunden pro Webseite", Section: "general", Type: "number"},
-	{Key: "CRAWL_MAX_CHARS", Label: "Crawl Max Chars", Description: "Maximale Zeichen für gecrawlte Inhalte (default: 64000)", Section: "general", Type: "number"},
 	{Key: "LISTEN_PORT", Label: "Server-Port", Description: "HTTP-Port der Anwendung", Section: "general", Type: "number"},
 	{Key: "MAX_PROCESS_DAYS", Label: "Verarbeitungsfenster (Tage)", Description: "Max. Tage rückwärts ab heute die verarbeitet werden sollen (bestehende Summaries bleiben erhalten, default: 14)", Section: "general", Type: "number"},
 
@@ -340,9 +339,5 @@ func (a *App) applyConfigValue(key, value string) {
 		a.cfg.CategoriesEN = value
 	case "CATEGORIZE_MODEL":
 		a.cfg.CategorizeModel = value
-	case "CRAWL_MAX_CHARS":
-		if n, err := strconv.Atoi(value); err == nil {
-			a.cfg.CrawlMaxChars = n
-		}
 	}
 }

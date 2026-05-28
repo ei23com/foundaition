@@ -199,6 +199,7 @@ func (a *App) getLinks(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		l.ContentLen = len(l.Content)
+		l.ContentLimit = int(float64(a.cfg.SummaryMaxTokens) * 3.5)
 		links = append(links, *l)
 	}
 
@@ -530,7 +531,7 @@ func (a *App) receiveLink(w http.ResponseWriter, r *http.Request) {
 			title = ""
 		} else {
 			title = truncateTitleMax(extractTitleFromMarkdown(crawled), 150)
-			content = crawled[:minLen(len(crawled), a.cfg.CrawlMaxChars)]
+			content = crawled[:minLen(len(crawled), int(float64(a.cfg.SummaryMaxTokens)*3.5))]
 		}
 	}
 
@@ -1110,6 +1111,7 @@ func (a *App) fetchLinkByID(id int64, wantContent bool) (*Link, error) {
 	}
 
 	l.ContentLen = len(l.Content)
+	l.ContentLimit = int(float64(a.cfg.SummaryMaxTokens) * 3.5)
 
 	var buf strings.Builder
 	if l.Summary != "" {

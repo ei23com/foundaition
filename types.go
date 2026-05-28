@@ -104,6 +104,7 @@ type Link struct {
 	Summary     string `json:"summary,omitempty"`
 	Content     string `json:"content,omitempty"`
 	ContentLen  int    `json:"content_len"`
+	ContentLimit int   `json:"content_limit"`
 	Category    string `json:"category"`
 	SummaryHTML string `json:"summary_html"`
 	Included    *bool  `json:"included,omitempty"` // included flag (true/false/null)

@@ -150,7 +150,6 @@ Dann `http://localhost:8080` im Browser öffnen. Port über `LISTEN_PORT=9000` �
 | `WHISPER_URL` | `http://localhost:8081` | Local Whisper server URL |
 | `WHISPER_MODEL` | `large-v3` | Whisper model |
 | `CRAWL_TIMEOUT` | `60` | Timeout per crawl request (seconds) |
-| `CRAWL_MAX_CHARS` | `64000` | Maximale Zeichen für gecrawlte Inhalte |
 | `YTDLP_PATH` | auto-detect | Path to yt-dlp binary |
 | `MAX_PROCESS_DAYS` | `14` | Max days backwards for batch processing |
 | `RSS_BASE_URL` | *(leer)* | Basis-URL für Feed-Links (z.B. bei Reverse Proxy). Leer = automatisch aus dem Request-Host. |
