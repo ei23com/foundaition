@@ -530,7 +530,7 @@ func (a *App) receiveLink(w http.ResponseWriter, r *http.Request) {
 			title = ""
 		} else {
 			title = truncateTitleMax(extractTitleFromMarkdown(crawled), 150)
-			content = crawled[:minLen(len(crawled), 8000)]
+			content = crawled[:minLen(len(crawled), a.cfg.CrawlMaxChars)]
 		}
 	}
 
@@ -594,6 +594,13 @@ func (a *App) handlePlaylistSubmission(w http.ResponseWriter, playlistURL, note 
 
 	var ids []int64
 	for _, videoURL := range videos {
+		// Duplikatprüfung pro Video
+		existingID, _ := a.findDuplicateURL(videoURL)
+		if existingID > 0 {
+			ids = append(ids, existingID)
+			continue
+		}
+
 		videoTitle := truncateTitleMax(a.fetchYouTubeTitle(videoURL), 150)
 		if videoTitle == "" {
 			crawledTitle, err := extractYouTubePageTitle(videoURL)
@@ -1478,14 +1485,14 @@ func (a *App) handleFeedAPI(w http.ResponseWriter, r *http.Request) {
 		query = fmt.Sprintf(`UPDATE %s SET "read" = 0 WHERE "id" = ?`, TableName)
 	case strings.HasSuffix(path, "/delete-summary"):
 		now := time.Now().UTC().Format(time.RFC3339)
-		query = fmt.Sprintf(`UPDATE %s SET "summary" = '', "content" = '', "timestamp" = ? WHERE "id" = ?`, TableName)
-		_, err = a.db.ExecContext(r.Context(), query, now, id)
+		query := fmt.Sprintf(`UPDATE %s SET "summary" = '', "content" = '', "timestamp" = ? WHERE "id" = ?`, TableName)
+		res, err := a.db.ExecContext(r.Context(), query, now, id)
 		if err != nil {
 			log.Printf("ERROR: feed API path=%s id=%d: %v", path, id, err)
 			http.Error(w, "update failed", http.StatusInternalServerError)
 			return
 		}
-		rows, _ := result.RowsAffected()
+		rows, _ := res.RowsAffected()
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"ok":       true,

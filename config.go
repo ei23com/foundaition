@@ -19,6 +19,7 @@ type Config struct {
 	WhisperModel          string // Whisper model (e.g. "large-v3")
 	WhisperAPIKey         string // Optional API key for Whisper auth
 	CrawlTimeoutSec       int    // Timeout per crawl request in seconds
+	CrawlMaxChars         int    // Max chars for crawled content (default: 64000)
 	YTDLPPath             string // Path to yt-dlp binary
 	YTDLAOutputDir        string // Output directory for downloaded audio files
 	YouTubeSubtitleMethod string // "whisper", "yt-dlp", "auto"
@@ -63,6 +64,7 @@ func loadConfig() Config {
 		WhisperModel:          envOrDefault("WHISPER_MODEL", "large-v3"),
 		WhisperAPIKey:         envOrDefault("WHISPER_API_KEY", ""),
 		CrawlTimeoutSec:       envIntOrDefault("CRAWL_TIMEOUT", 60),
+		CrawlMaxChars:         envIntOrDefault("CRAWL_MAX_CHARS", 64000),
 		YTDLPPath:             envOrDefault("YTDLP_PATH", getYTDLPPath()),
 		YTDLAOutputDir:        envOrDefault("YTDLA_OUTPUT_DIR", filepath.Join(getBinaryDir(), "audio_tmp")),
 		YouTubeSubtitleMethod: envOrDefault("YOUTUBE_SUBTITLE_METHOD", "auto"),
