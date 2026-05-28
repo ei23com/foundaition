@@ -279,7 +279,10 @@ func (a *App) updateLink(w http.ResponseWriter, r *http.Request) {
 
 	// Clear summary ("true")
 	if r.URL.Query().Get("clear_summary") == "true" {
+		now := time.Now().UTC().Format(time.RFC3339)
 		setClauses = append(setClauses, `"summary" = ''`)
+		setClauses = append(setClauses, `"timestamp" = ?`)
+		args = append(args, now)
 	}
 
 	if len(setClauses) == 0 {
@@ -1400,7 +1403,8 @@ func (a *App) handleRSS(w http.ResponseWriter, r *http.Request) {
 
 		buf.WriteString("  <entry>\n")
 		buf.WriteString(fmt.Sprintf("    <title>%s</title>\n", escXml(e.Title)))
-		buf.WriteString(fmt.Sprintf("    <id>tag:,%s:id=%d</id>\n", now[:10], e.ID))
+		yearStr := e.Ts.Format("2006")
+		buf.WriteString(fmt.Sprintf("    <id>tag:ei23,%s:link=%d</id>\n", yearStr, e.ID))
 		if e.URL != "" {
 			buf.WriteString(fmt.Sprintf("    <link href=\"%s\"/>\n", escXmlAttr(e.URL)))
 		} else if base != "" {
@@ -1473,7 +1477,23 @@ func (a *App) handleFeedAPI(w http.ResponseWriter, r *http.Request) {
 	case strings.HasSuffix(path, "/unread"):
 		query = fmt.Sprintf(`UPDATE %s SET "read" = 0 WHERE "id" = ?`, TableName)
 	case strings.HasSuffix(path, "/delete-summary"):
-		query = fmt.Sprintf(`UPDATE %s SET "summary" = '', "content" = '' WHERE "id" = ?`, TableName)
+		now := time.Now().UTC().Format(time.RFC3339)
+		query = fmt.Sprintf(`UPDATE %s SET "summary" = '', "content" = '', "timestamp" = ? WHERE "id" = ?`, TableName)
+		_, err = a.db.ExecContext(r.Context(), query, now, id)
+		if err != nil {
+			log.Printf("ERROR: feed API path=%s id=%d: %v", path, id, err)
+			http.Error(w, "update failed", http.StatusInternalServerError)
+			return
+		}
+		rows, _ := result.RowsAffected()
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":       true,
+			"path":     path,
+			"id":       id,
+			"affected": rows,
+		})
+		return
 	default:
 		http.Error(w, "unknown action", http.StatusBadRequest)
 		return
